@@ -1,22 +1,45 @@
 pipeline {
     agent any
-      
+
+    tools {
+        nodejs 'nodejs-18'  // Make sure this matches the name in Jenkins Global Tool Configuration
+    }
 
     stages {
-        stage('Git checkout') {
+        stage('Git Checkout') {
             steps {
-                // Get some code from a GitHub repository
+                // Clone the Node.js project
                 git 'https://github.com/eligetipavankumar/Trading-UI.git'
-                   }
-}
-        stage('Install npm prerequisites'){
-            steps{
-                sh'npm audit fix'
-                sh'npm install'
-                sh'npm run build'
-                sh'cd /var/lib/jenkins/workspace/Trading-ui-pipeline/build'
-                sh'pm2 --name Trading-UI start npm -- start'
             }
+        }
+
+        stage('Install and Build') {
+            steps {
+                // Install dependencies, fix vulnerabilities, build
+                sh 'npm audit fix || true'
+                sh 'npm install'
+                sh 'npm run build'
+            }
+        }
+
+        stage('Deploy with PM2') {
+            steps {
+                // Change to build directory and start the app with PM2
+                sh '''
+                    cd build
+                    pm2 delete Trading-UI || true
+                    pm2 start npm --name "Trading-UI" -- start
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
